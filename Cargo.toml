@@ -1,0 +1,9 @@
+[package]
+name = "time_tracker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+iced = "0.12.1"
+jiff = "0.1.1"
+rusqlite = { version = "0.32.0", features = ["bundled"] }
