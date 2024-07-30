@@ -1,10 +1,10 @@
-use jiff::Zoned;
+use jiff::{Span, Zoned};
 
 pub struct WorkTimes {
     pub label: Option<String>,
     pub start: Option<Zoned>,
     pub end: Option<Zoned>,
-    pub duration: Option<f32>
+    pub duration: Option<Span>
 }
 
 impl WorkTimes {
@@ -85,6 +85,10 @@ impl OneDaysWork {
             }
             None => {
                 self.work_duration.last_mut().unwrap().set_end();
+                let start = self.work_duration.last().unwrap().start.clone().unwrap();
+                let stop = self.work_duration.last().unwrap().end.clone().unwrap();
+                let duration = start.until(&stop).unwrap();
+                self.work_duration.last_mut().unwrap().duration = Some(duration);
             }
         }
     }

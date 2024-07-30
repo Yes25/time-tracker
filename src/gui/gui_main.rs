@@ -72,21 +72,25 @@ impl Application for AppState {
         };
 
         let main_container = Container::new(
-            column!(
-                row!(
-                    column!(
-                        row!(
-                            one_days_work(&self.todays_work),
-                            start_btn,
-                            stop_btn,
-                        )
-                        .spacing(30)
-                        .padding(Padding::from(15))
-                    ),
-                    column!()
-                    )
+            row!(
+                column!(
+                    one_days_work(&self.todays_work),
                 )
-            );
+                .padding(Padding::from(10))
+                .height(Length::Fill)
+                .width(Length::FillPortion(4)),
+                column!(
+                    row!(
+                        start_btn,
+                        stop_btn,
+                    )
+                    .spacing(15)
+                    .padding(Padding::from(10))
+                )
+                .height(Length::Fill)
+                .width(Length::FillPortion(2)),
+            )
+        );
             
         main_container.height(Length::Fill)
         .width(Length::Fill)
@@ -110,17 +114,22 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
     for item in &one_days_work.work_duration {
         let mut start_label = "".to_owned();
         let mut stop_label = "".to_owned();
+        let mut duration_label = "".to_owned();
         if let Some(start) = &item.start {
             start_label = start.time().round(Unit::Second).unwrap().to_string();
         }
         if let Some(end) = &item.end {
             stop_label = end.time().round(Unit::Second).unwrap().to_string();
         }
+        if let Some(duration) = &item.duration {
+            duration_label = duration.get_minutes().to_string();
+        }
 
         col = col.push(
             row!(
                 text("start: ".to_owned() + &start_label),
                 text("stop: ".to_owned() + &stop_label),
+                text("duration: ".to_owned() + &duration_label),
             )
             .spacing(20)
         );
