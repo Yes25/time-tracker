@@ -1,8 +1,6 @@
-use std::borrow::Borrow;
-
 use iced::{executor, Command};
 use iced::{Application, alignment, Element, Length, Padding};
-use iced::widget::{button, column, container, row, text, Container, Column};
+use iced::widget::{button, column, container, row, text, Column, Container, Row};
 use jiff::Unit;
 
 
@@ -71,6 +69,22 @@ impl Application for AppState {
             State::Started => (start_btn, stop_btn.on_press(Message::Stop))
         };
 
+        let mut sum_duration = String::from("Work total: ");
+        if let Some(sum) = self.todays_work.sum_work {
+            let hours = sum.get_hours().to_string();
+            let minutes = sum.get_minutes().to_string();
+            let seconds = sum.get_seconds().to_string();
+            sum_duration = sum_duration + &(format!("{}:{}:{}", hours, minutes, seconds));
+        }
+
+        let mut sum_pauses = String::from("Breaks total: ");
+        if let Some(sum) = self.todays_work.sum_pause {
+            let hours = sum.get_hours().to_string();
+            let minutes = sum.get_minutes().to_string();
+            let seconds = sum.get_seconds().to_string();
+            sum_pauses = sum_pauses + &(format!("{}:{}:{}", hours, minutes, seconds));
+        }
+
         let main_container = Container::new(
             row!(
                 column!(
@@ -86,9 +100,18 @@ impl Application for AppState {
                     )
                     .spacing(15)
                     .padding(Padding::from(10))
+                    .width(Length::Fill)
+                    .align_items(iced::Alignment::End),
+                    row!(
+                        text(sum_duration),
+                    ),
+                    row!(
+                        text(sum_pauses),
+                    )
                 )
                 .height(Length::Fill)
                 .width(Length::FillPortion(2)),
+
             )
         );
             
@@ -109,12 +132,20 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
         date_label = date.date().to_string();
     }
     
-    let mut col: Column<Message> = Column::new();
+    let padding = Padding{top: 2., left: 5., bottom: 2., right: 0.};
+    let col_width = 75;
+
+    let mut start_col: Column<Message> = column!( row!( text("Start") ) ).padding(padding).width(col_width);
+    let mut stop_col: Column<Message> = column!( row!( text("Stop") ) ).padding(padding).width(col_width);
+    let mut duration_col: Column<Message> = column!( row!( text("Duration") ) ).padding(padding).width(col_width);
+    let mut pause_col: Column<Message> = column!( row!( text("Break") ) ).padding(padding).width(col_width);
 
     for item in &one_days_work.work_duration {
         let mut start_label = "".to_owned();
         let mut stop_label = "".to_owned();
         let mut duration_label = "".to_owned();
+        let mut pause_label = "".to_owned();
+
         if let Some(start) = &item.start {
             start_label = start.time().round(Unit::Second).unwrap().to_string();
         }
@@ -122,26 +153,39 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
             stop_label = end.time().round(Unit::Second).unwrap().to_string();
         }
         if let Some(duration) = &item.duration {
-            duration_label = duration.get_minutes().to_string();
+            let hours = duration.get_hours().to_string();
+            let minutes = duration.get_minutes().to_string();
+            let seconds = duration.get_seconds().to_string();
+            duration_label = format!("{}:{}:{}", hours, minutes, seconds);
+        }
+        if let Some(pause) = &item.pause {
+            let hours = pause.get_hours().to_string();
+            let minutes = pause.get_minutes().to_string();
+            let seconds = pause.get_seconds().to_string();
+            pause_label = format!("{}:{}:{}", hours, minutes, seconds);
         }
 
-        col = col.push(
-            row!(
-                text("start: ".to_owned() + &start_label),
-                text("stop: ".to_owned() + &stop_label),
-                text("duration: ".to_owned() + &duration_label),
-            )
-            .spacing(20)
-        );
+        start_col = start_col.push(row!(text(&start_label)));
+        stop_col = stop_col.push(row!(text(&stop_label)));
+        duration_col = duration_col.push(row!(text(&duration_label)));
+        pause_col = pause_col.push(row!(text(&pause_label)));
+        
     }
+
+    let mut table: Row<Message> = Row::new();
+        table = table.push(start_col);
+        table = table.push(stop_col);
+        table = table.push(duration_col);
+        table = table.push(pause_col);
 
     let one_days_work_wideget = container(
         column!(
             row!(
                 text("date: "),
                 text(date_label),
-            ),
-            col,
+            )
+            .padding(Padding{top: 0., right: 0., bottom:7., left:0.}),
+            table,
         )
     );
 

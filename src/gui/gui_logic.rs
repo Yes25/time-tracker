@@ -4,7 +4,8 @@ pub struct WorkTimes {
     pub label: Option<String>,
     pub start: Option<Zoned>,
     pub end: Option<Zoned>,
-    pub duration: Option<Span>
+    pub duration: Option<Span>,
+    pub pause: Option<Span>
 }
 
 impl WorkTimes {
@@ -14,6 +15,7 @@ impl WorkTimes {
             start: None,
             end: None,
             duration: None,
+            pause: None,
         }
     }
 
@@ -41,7 +43,8 @@ impl WorkTimes {
 pub struct OneDaysWork {
     pub date: Option<Zoned>,
     pub work_duration: Vec<WorkTimes>,
-    pub pause: Vec<i32>
+    pub sum_work: Option<Span>,
+    pub sum_pause: Option<Span>,
 }
 
 impl OneDaysWork {
@@ -50,7 +53,8 @@ impl OneDaysWork {
         OneDaysWork {
             date: None,
             work_duration: vec![],
-            pause: vec![]
+            sum_work: None,
+            sum_pause: None,
         }   
     }
 
@@ -67,14 +71,19 @@ impl OneDaysWork {
             match self.work_duration.last().unwrap().end {
                 Some(_) => {
                     let work_times = WorkTimes::build_new_work_times();
+                    let start = work_times.start.clone().unwrap();
+                    
+                    let end = self.work_duration.last().unwrap().end.clone().unwrap();
+                    let duration_pause = end.until(&start).unwrap();
+                    self.work_duration.last_mut().unwrap().pause = Some(duration_pause);
+                    
                     self.work_duration.push(work_times);
+                    self.sum_pauses();
                 }
                 None => {
                     println!("WARN ::: end wasn't set jet")    
                 }
-
             }
-
         }
     }
 
@@ -89,7 +98,32 @@ impl OneDaysWork {
                 let stop = self.work_duration.last().unwrap().end.clone().unwrap();
                 let duration = start.until(&stop).unwrap();
                 self.work_duration.last_mut().unwrap().duration = Some(duration);
+                self.sum_durations();   
             }
         }
+    }
+
+    pub fn sum_durations(&mut self) {
+        let work_times_vec = &self.work_duration;
+        let mut sum = Span::new();
+
+        for item in work_times_vec {
+            if let Some(duration) = item.duration {
+                sum = sum.checked_add(duration).unwrap();
+            }
+        }
+        self.sum_work = Some(sum);
+    }
+
+    pub fn sum_pauses(&mut self) {
+        let work_times_vec = &self.work_duration;
+        let mut sum = Span::new();
+
+        for item in work_times_vec {
+            if let Some(duration) = item.pause {
+                sum = sum.checked_add(duration).unwrap();
+            }
+        }
+        self.sum_pause = Some(sum);
     }
 }
