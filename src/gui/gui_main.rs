@@ -1,14 +1,40 @@
 use iced::{executor, Command};
 use iced::{Application, alignment, Element, Length, Padding};
 use iced::widget::{button, column, container, row, text, Column, Container, Row};
-use jiff::Unit;
+use jiff::civil::{date, Date};
+use jiff::{Unit, Zoned};
 
 
+use crate::config::{get_config, Config};
 use crate::gui::gui_logic::OneDaysWork;
 
 pub struct AppState {
+    config: Config,
     state: State,
+    sum_til_last_day: f32,
+    should_hours: f32, 
     todays_work: OneDaysWork,
+}
+
+fn init_app_state() -> AppState {
+    let config = get_config();
+    let hours_week = config.hours_week;
+    let start_day = config.start_date;
+    let today = Zoned::now().date();
+
+    let work_span = today.since(start_day).unwrap();
+    let work_days = (work_span.get_days() + 1) as f32 ;     // + 1 because today is not elapsed, hence it os not in get_days. But we want to know how much I should have worked at the end of today 
+    let should_hours = work_days * (hours_week / 5.);
+
+    // TODO: compute the should hours 
+
+    AppState {
+        config: config,
+        state: State::Stopped,
+        sum_til_last_day: 0.,
+        should_hours: should_hours,
+        todays_work: OneDaysWork::init(),
+    } 
 }
 
 #[derive(Debug, Clone)]
@@ -30,10 +56,14 @@ impl Application for AppState {
 	
 	fn new(_flags: ()) -> (AppState, Command<Self::Message>) {
 		(
-            Self {
-                state: State::Stopped,
-                todays_work: OneDaysWork::init(),
-            }, 
+            // Self {
+            //     config: get_config(),
+            //     state: State::Stopped,
+            //     sum_til_last_day: 0.,
+            //     shuold_hours: 0.,
+            //     todays_work: OneDaysWork::init(),
+            // },
+            init_app_state(), 
             Command::none()
         )
 	}
@@ -181,7 +211,7 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
     let one_days_work_wideget = container(
         column!(
             row!(
-                text("date: "),
+                text("Date: "),
                 text(date_label),
             )
             .padding(Padding{top: 0., right: 0., bottom:7., left:0.}),

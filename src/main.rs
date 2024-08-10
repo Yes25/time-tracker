@@ -4,6 +4,7 @@ mod gui {
     pub(crate) mod gui_main;
     mod gui_logic;
 }
+mod config;
 
 use crate::gui::gui_main::AppState;
 
