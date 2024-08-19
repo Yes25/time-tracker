@@ -3,10 +3,12 @@ use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 
 use jiff::civil::date;
 use jiff::civil::Date;
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
     pub hours_week: f32,
     pub start_date: Date,

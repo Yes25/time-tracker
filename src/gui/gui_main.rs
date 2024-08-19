@@ -1,39 +1,36 @@
 use iced::{executor, Command};
 use iced::{Application, alignment, Element, Length, Padding};
 use iced::widget::{button, column, container, row, text, Column, Container, Row};
-use jiff::civil::{date, Date};
-use jiff::{Unit, Zoned};
-
+use jiff::Unit;
+use serde::{Deserialize, Serialize};
 
 use crate::config::{get_config, Config};
+use crate::utils::format_duration;
 use crate::gui::gui_logic::OneDaysWork;
+use crate::gui::serialize::{update_work_data, export};
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AppState {
-    config: Config,
-    state: State,
-    sum_til_last_day: f32,
-    should_hours: f32, 
-    todays_work: OneDaysWork,
+    pub config: Config,
+    pub state: State,
+    pub todays_work: OneDaysWork,
 }
 
 fn init_app_state() -> AppState {
     let config = get_config();
-    let hours_week = config.hours_week;
-    let start_day = config.start_date;
-    let today = Zoned::now().date();
+    let todays_work = OneDaysWork::init(&config);
 
-    let work_span = today.since(start_day).unwrap();
-    let work_days = (work_span.get_days() + 1) as f32 ;     // + 1 because today is not elapsed, hence it os not in get_days. But we want to know how much I should have worked at the end of today 
-    let should_hours = work_days * (hours_week / 5.);
-
-    // TODO: compute the should hours 
+    let mut state = State::Stopped;
+    if let Some(todays_work) = todays_work.work_duration.last() {
+        if  todays_work.end.is_none() && todays_work.start.is_some()  {
+            state = State::Started
+        }
+    }
 
     AppState {
-        config: config,
-        state: State::Stopped,
-        sum_til_last_day: 0.,
-        should_hours: should_hours,
-        todays_work: OneDaysWork::init(),
+        config,
+        state,
+        todays_work,
     } 
 }
 
@@ -41,9 +38,11 @@ fn init_app_state() -> AppState {
 pub enum Message {
     Start,
     Stop,
+    Export
 }
 
-enum State {
+#[derive(Serialize, Deserialize, Clone)]
+pub enum State {
     Started,
     Stopped
 } 
@@ -56,13 +55,6 @@ impl Application for AppState {
 	
 	fn new(_flags: ()) -> (AppState, Command<Self::Message>) {
 		(
-            // Self {
-            //     config: get_config(),
-            //     state: State::Stopped,
-            //     sum_til_last_day: 0.,
-            //     shuold_hours: 0.,
-            //     todays_work: OneDaysWork::init(),
-            // },
             init_app_state(), 
             Command::none()
         )
@@ -81,10 +73,16 @@ impl Application for AppState {
             Message::Start => {
                 self.todays_work.start();
                 self.state = State::Started;
+                update_work_data(self.todays_work.clone());
+
             },
             Message::Stop => {
                 self.todays_work.stop();
                 self.state = State::Stopped;
+                update_work_data(self.todays_work.clone());
+            }
+            Message::Export => {
+                export(&self.todays_work);
             }
         } 
 
@@ -114,7 +112,9 @@ impl Application for AppState {
             let seconds = sum.get_seconds().to_string();
             sum_pauses = sum_pauses + &(format!("{}:{}:{}", hours, minutes, seconds));
         }
-
+        
+        
+        
         let main_container = Container::new(
             row!(
                 column!(
@@ -137,6 +137,9 @@ impl Application for AppState {
                     ),
                     row!(
                         text(sum_pauses),
+                    ),
+                    row!(
+                        button("export").on_press(Message::Export),
                     )
                 )
                 .height(Length::Fill)
@@ -183,16 +186,18 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
             stop_label = end.time().round(Unit::Second).unwrap().to_string();
         }
         if let Some(duration) = &item.duration {
-            let hours = duration.get_hours().to_string();
-            let minutes = duration.get_minutes().to_string();
-            let seconds = duration.get_seconds().to_string();
-            duration_label = format!("{}:{}:{}", hours, minutes, seconds);
+            // let hours = duration.get_hours().to_string();
+            // let minutes = duration.get_minutes().to_string();
+            // let seconds = duration.get_seconds().to_string();
+            // duration_label = format!("{}:{}:{}", hours, minutes, seconds);
+            duration_label = format_duration(duration);
         }
         if let Some(pause) = &item.pause {
-            let hours = pause.get_hours().to_string();
-            let minutes = pause.get_minutes().to_string();
-            let seconds = pause.get_seconds().to_string();
-            pause_label = format!("{}:{}:{}", hours, minutes, seconds);
+            // let hours = pause.get_hours().to_string();
+            // let minutes = pause.get_minutes().to_string();
+            // let seconds = pause.get_seconds().to_string();
+            // pause_label = format!("{}:{}:{}", hours, minutes, seconds);
+            pause_label = format_duration(pause);
         }
 
         start_col = start_col.push(row!(text(&start_label)));

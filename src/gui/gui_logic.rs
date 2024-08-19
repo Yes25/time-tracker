@@ -1,5 +1,13 @@
-use jiff::{Span, Zoned};
+use std::env;
+use std::path::PathBuf;
 
+use jiff::{Span, Zoned};
+use serde::{Deserialize, Serialize};
+
+use crate::config::Config;
+use crate::gui::serialize::read_work_data;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct WorkTimes {
     pub label: Option<String>,
     pub start: Option<Zoned>,
@@ -40,7 +48,10 @@ impl WorkTimes {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OneDaysWork {
+    pub sum_til_last_day: f32,
+    pub should_hours: f32,
     pub date: Option<Zoned>,
     pub work_duration: Vec<WorkTimes>,
     pub sum_work: Option<Span>,
@@ -49,14 +60,42 @@ pub struct OneDaysWork {
 
 impl OneDaysWork {
 
-    pub fn init() -> OneDaysWork {
+    pub fn init(config: &Config) -> OneDaysWork {
+        
+        let mut path: PathBuf = env::current_exe().unwrap();
+        path.set_file_name(".work_data");
+        path.set_extension("json");
+
+        let today = Zoned::now().date();
+
+        if let Some(work_days) =  read_work_data(&path) {
+            if let Some(last_work_day) = work_days.states.last() {
+                if let Some(date) = &last_work_day.date {
+                    if date.date() == today {
+                        return last_work_day.to_owned();
+                    } 
+                }
+            };
+            
+        }
+        
+        let hours_week = config.hours_week;
+        let start_day = config.start_date;
+
+        let work_span = today.since(start_day).unwrap();
+        let work_days = (work_span.get_days() + 1) as f32 ;     // + 1 because today is not elapsed, hence it os not in get_days. But we want to know how much I should have worked at the end of today 
+        let should_hours = work_days * (hours_week / 5.);
+
         OneDaysWork {
+            sum_til_last_day: 0.,
+            should_hours: should_hours,
             date: None,
             work_duration: vec![],
             sum_work: None,
-            sum_pause: None,
-        }   
-    }
+            sum_pause: None, 
+        }
+    }   
+    
 
     pub fn set_date(&mut self) {
         self.date = Some(Zoned::now())

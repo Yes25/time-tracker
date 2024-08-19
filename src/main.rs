@@ -3,8 +3,10 @@
 mod gui {
     pub(crate) mod gui_main;
     mod gui_logic;
+    mod serialize;
 }
 mod config;
+mod utils;
 
 use crate::gui::gui_main::AppState;
 
