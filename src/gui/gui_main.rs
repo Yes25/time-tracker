@@ -82,7 +82,7 @@ impl Application for AppState {
                 update_work_data(self.todays_work.clone());
             }
             Message::Export => {
-                export(&self.todays_work);
+                export();
             }
         } 
 
@@ -186,17 +186,9 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
             stop_label = end.time().round(Unit::Second).unwrap().to_string();
         }
         if let Some(duration) = &item.duration {
-            // let hours = duration.get_hours().to_string();
-            // let minutes = duration.get_minutes().to_string();
-            // let seconds = duration.get_seconds().to_string();
-            // duration_label = format!("{}:{}:{}", hours, minutes, seconds);
             duration_label = format_duration(duration);
         }
         if let Some(pause) = &item.pause {
-            // let hours = pause.get_hours().to_string();
-            // let minutes = pause.get_minutes().to_string();
-            // let seconds = pause.get_seconds().to_string();
-            // pause_label = format!("{}:{}:{}", hours, minutes, seconds);
             pause_label = format_duration(pause);
         }
 

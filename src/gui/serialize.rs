@@ -58,14 +58,31 @@ pub fn read_work_data(path: &PathBuf) -> Option<WorkDays> {
 }
 
 
+
 pub fn write_work_data(work_days: WorkDays, path: &PathBuf) {
     let serialized = serde_json::to_string(&work_days).unwrap();
     fs::write(path, serialized).unwrap();
 }
 
 
-pub fn export(todays_work: &OneDaysWork) {
+pub fn export() {
+    let mut path: PathBuf = env::current_exe().unwrap();
+    path.set_file_name(".work_data");
+    path.set_extension("json");
 
+    let mut write_string = String::from(";;;;;;;\n");
+
+    if let Some(work_days) = read_work_data(&path) {
+        for work_day in work_days.states {
+            write_string = write_string + &serialize_to_csv(work_day);
+        }
+    }
+
+    fs::write("/Users/jessekruse/Desktop/work_times.csv", write_string).unwrap();
+}
+
+
+fn serialize_to_csv(todays_work: OneDaysWork) -> String{
     let sum_til_last_day = todays_work.sum_til_last_day;
     let should_hours = todays_work.should_hours;
 
@@ -107,7 +124,5 @@ pub fn export(todays_work: &OneDaysWork) {
     }
 
     write_string = write_string + "\n";
-    
-    fs::write("/Users/jessekruse/Desktop/work_times.csv", write_string).unwrap();
-    
+    write_string
 }
