@@ -1,6 +1,6 @@
 use iced::{executor, Command};
 use iced::{Application, alignment, Element, Length, Padding};
-use iced::widget::{button, column, container, row, text, Column, Container, Row};
+use iced::widget::{button, column, container, horizontal_space, row, text, vertical_space, Column, Container, Row};
 use jiff::Unit;
 use serde::{Deserialize, Serialize};
 
@@ -113,8 +113,6 @@ impl Application for AppState {
             sum_pauses = sum_pauses + &(format!("{}:{}:{}", hours, minutes, seconds));
         }
         
-        
-        
         let main_container = Container::new(
             row!(
                 column!(
@@ -130,24 +128,28 @@ impl Application for AppState {
                     )
                     .spacing(15)
                     .padding(Padding::from(10))
-                    .width(Length::Fill)
-                    .align_items(iced::Alignment::End),
+                    .width(Length::Fill),
                     row!(
                         text(sum_duration),
                     ),
                     row!(
                         text(sum_pauses),
                     ),
+                    vertical_space(),
                     row!(
+                        horizontal_space(),
                         button("export").on_press(Message::Export),
                     )
+                    .width(Length::Fill)
+                    .spacing(15)
+                    .padding(Padding::from(10))
                 )
                 .height(Length::Fill)
                 .width(Length::FillPortion(2)),
 
             )
         );
-            
+        
         main_container.height(Length::Fill)
         .width(Length::Fill)
         .align_x(alignment::Horizontal::Center)
