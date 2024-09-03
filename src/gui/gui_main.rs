@@ -97,21 +97,7 @@ impl Application for AppState {
             State::Started => (start_btn, stop_btn.on_press(Message::Stop))
         };
 
-        let mut sum_duration = String::from("Work total: ");
-        if let Some(sum) = self.todays_work.sum_work {
-            let hours = sum.get_hours().to_string();
-            let minutes = sum.get_minutes().to_string();
-            let seconds = sum.get_seconds().to_string();
-            sum_duration = sum_duration + &(format!("{}:{}:{}", hours, minutes, seconds));
-        }
-
-        let mut sum_pauses = String::from("Breaks total: ");
-        if let Some(sum) = self.todays_work.sum_pause {
-            let hours = sum.get_hours().to_string();
-            let minutes = sum.get_minutes().to_string();
-            let seconds = sum.get_seconds().to_string();
-            sum_pauses = sum_pauses + &(format!("{}:{}:{}", hours, minutes, seconds));
-        }
+        
         
         let main_container = Container::new(
             row!(
@@ -129,12 +115,7 @@ impl Application for AppState {
                     .spacing(15)
                     .padding(Padding::from(10))
                     .width(Length::Fill),
-                    row!(
-                        text(sum_duration),
-                    ),
-                    row!(
-                        text(sum_pauses),
-                    ),
+                    table_totals(&self.todays_work),
                     vertical_space(),
                     row!(
                         horizontal_space(),
@@ -182,10 +163,10 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
         let mut pause_label = "".to_owned();
 
         if let Some(start) = &item.start {
-            start_label = start.time().round(Unit::Second).unwrap().to_string();
+            start_label = start.time().round(Unit::Minute).unwrap().to_string()[0..5].to_owned();
         }
         if let Some(end) = &item.end {
-            stop_label = end.time().round(Unit::Second).unwrap().to_string();
+            stop_label = end.time().round(Unit::Minute).unwrap().to_string()[0..5].to_owned();
         }
         if let Some(duration) = &item.duration {
             duration_label = format_duration(duration);
@@ -219,4 +200,55 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
     );
 
     one_days_work_wideget.into()
+}
+
+
+fn table_totals(one_days_work: &OneDaysWork) -> Element<'static, Message> {
+    
+    let mut sum_duration = String::from("");
+    if let Some(sum) = one_days_work.sum_work {
+        let hours = sum.get_hours().to_string();
+        let minutes = sum.get_minutes().to_string();
+        sum_duration = format!("{}:{}", hours, minutes);
+    }
+    let work_total: Row<Message> = row!(
+        text("Work total: "),
+        text(sum_duration)
+    );
+
+    let mut sum_pauses = String::from("");
+    if let Some(sum) = one_days_work.sum_pause {
+        let hours = sum.get_hours().to_string();
+        let minutes = sum.get_minutes().to_string();
+        sum_pauses = format!("{}:{}", hours, minutes);
+    }
+    let breaks_total: Row<Message> = row!(
+        text("Breaks total: "),
+        text(sum_pauses)
+    );
+
+    
+    let mut delta_label = String::from("");
+    let sum_til_last_day = one_days_work.sum_total;
+    let should_hours = one_days_work.should_hours;
+    let mut hours: f32= 0.;
+    if let Some(sum) = one_days_work.sum_work {
+        hours = sum.get_hours() as f32;
+        hours = hours + sum.get_minutes() as f32 / 60.;
+    }
+    let delta = (sum_til_last_day + hours) - should_hours;
+    delta_label = format!("{:.2}", delta);
+    
+    let work_all_times: Row<Message> = row!(
+        text("Contingent: "),
+        text(delta_label)
+    );
+
+
+    let mut table: Column<Message> = Column::new();
+        table = table.push(work_total);
+        table = table.push(breaks_total);
+        table = table.push(work_all_times);
+    
+    table.into()
 }

@@ -83,7 +83,7 @@ pub fn export() {
 
 
 fn serialize_to_csv(todays_work: OneDaysWork) -> String{
-    let sum_til_last_day = todays_work.sum_til_last_day;
+    let sum_til_last_day = todays_work.sum_total;
     let should_hours = todays_work.should_hours;
 
     let date = todays_work.date.as_ref().unwrap().date();

@@ -50,7 +50,7 @@ impl WorkTimes {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OneDaysWork {
-    pub sum_til_last_day: f32,
+    pub sum_total: f32,
     pub should_hours: f32,
     pub date: Option<Zoned>,
     pub work_duration: Vec<WorkTimes>,
@@ -67,9 +67,11 @@ impl OneDaysWork {
         path.set_extension("json");
 
         let today = Zoned::now().date();
+        let mut sum_total = 0.;
 
         if let Some(work_days) =  read_work_data(&path) {
             if let Some(last_work_day) = work_days.states.last() {
+                sum_total = last_work_day.sum_total;
                 if let Some(date) = &last_work_day.date {
                     if date.date() == today {
                         return last_work_day.to_owned();
@@ -87,7 +89,7 @@ impl OneDaysWork {
         let should_hours = work_days * (hours_week / 5.);
 
         OneDaysWork {
-            sum_til_last_day: 0.,
+            sum_total,
             should_hours: should_hours,
             date: None,
             work_duration: vec![],
@@ -137,7 +139,10 @@ impl OneDaysWork {
                 let stop = self.work_duration.last().unwrap().end.clone().unwrap();
                 let duration = start.until(&stop).unwrap();
                 self.work_duration.last_mut().unwrap().duration = Some(duration);
-                self.sum_durations();   
+                self.sum_durations();
+                let hours = duration.get_hours() as f32;
+                let minutes = duration.get_minutes() as f32 / 60.;
+                self.sum_total = self.sum_total + hours + minutes
             }
         }
     }
