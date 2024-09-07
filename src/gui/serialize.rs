@@ -66,19 +66,28 @@ pub fn write_work_data(work_days: WorkDays, path: &PathBuf) {
 
 
 pub fn export() {
-    let mut path: PathBuf = env::current_exe().unwrap();
-    path.set_file_name(".work_data");
-    path.set_extension("json");
 
-    let mut write_string = String::from(";;;;;;;\n");
+    let path_buf = rfd::FileDialog::new()
+        .set_file_name("work_times_export.csv")
+        // TODO: anderes default dir setzen
+        .set_directory("/Users/jesse/Desktop")
+        .save_file();
 
-    if let Some(work_days) = read_work_data(&path) {
-        for work_day in work_days.states {
-            write_string = write_string + &serialize_to_csv(work_day);
+    if let Some(path_buf) = path_buf {
+        let mut path: PathBuf = env::current_exe().unwrap();
+        path.set_file_name(".work_data");
+        path.set_extension("json");
+
+        let mut write_string = String::from(";;;;;;\n");
+
+        if let Some(work_days) = read_work_data(&path) {
+            for work_day in work_days.states {
+                write_string = write_string + &serialize_to_csv(work_day);
+            }
         }
+        fs::write(path_buf, write_string).unwrap();
     }
 
-    fs::write("/Users/jessekruse/Desktop/work_times.csv", write_string).unwrap();
 }
 
 
@@ -98,10 +107,10 @@ fn serialize_to_csv(todays_work: OneDaysWork) -> String{
     };
     let contingent = sum_til_last_day-should_hours;
 
-    let mut write_string = format!("{date};;;;;;;\n");
-    write_string = write_string + &format!("SUM WORK;{sum_work};;SUM BREAKS;{sum_pause};;CONTINGENT;{contingent}\n");
-    write_string = write_string + ";;;;;;;\n";
-    write_string = write_string + "START;END;DURATION;BREAK;;;;\n";
+    let mut write_string = format!("{date};;;;;;\n");
+    write_string = write_string + &format!(";SUM WORK;{sum_work};SUM BREAKS;{sum_pause};CONTINGENT;{contingent}\n");
+    write_string = write_string + ";;;;;;\n";
+    write_string = write_string + ";START;END;;DURATION;BREAK;\n";
     
     for work_times in &todays_work.work_duration {
         let start = match work_times.start.as_ref() {
@@ -120,7 +129,7 @@ fn serialize_to_csv(todays_work: OneDaysWork) -> String{
             Some(pause) => &format_duration(&pause),
             None => ""
         };
-        write_string = write_string + &format!("{start};{end};{duration};{pause};;;;\n")
+        write_string = write_string + &format!(";{start};{end};;{duration};{pause};\n")
     }
 
     write_string = write_string + "\n";

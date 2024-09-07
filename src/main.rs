@@ -17,8 +17,8 @@ fn  main() {
     let settings: Settings<()> = iced::settings::Settings {
         window: window::Settings {
             size: iced::Size::new(500.0, 200.0),
-            resizable: (true),
-            decorations: (true),
+            resizable: true,
+            decorations: true,
             ..Default::default()
         },
         ..Default::default()

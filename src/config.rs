@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use jiff::civil::date;
 use jiff::civil::Date;
+use jiff::Zoned;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -27,7 +28,9 @@ pub fn get_config() -> Config {
 
 
 fn write_new_config_file(path: &PathBuf) {
-    let content = "hours_week = 38.5\nstart_date = 2024-07-01".as_bytes();
+    let today = Zoned::now().date().to_string();
+    let content = format!("hours_week = 38.5\nstart_date = {}", today);
+    let content = content.as_bytes();
 
     let mut file = File::create(path).unwrap();
     let _ = file.write_all(content.into());
