@@ -5,7 +5,7 @@ use jiff::Unit;
 use serde::{Deserialize, Serialize};
 
 use crate::config::{get_config, Config};
-use crate::utils::format_duration;
+use crate::utils::{compute_hours_and_minutes, format_duration};
 use crate::gui::gui_logic::OneDaysWork;
 use crate::gui::serialize::{update_work_data, export};
 
@@ -236,8 +236,9 @@ fn table_totals(one_days_work: &OneDaysWork) -> Element<'static, Message> {
         hours = sum.get_hours() as f32;
         hours = hours + sum.get_minutes() as f32 / 60.;
     }
-    let delta = (sum_til_last_day + hours) - should_hours;
-    delta_label = format!("{:.2}", delta);
+    let delta = sum_til_last_day - should_hours;
+    let (hours, minutes) = compute_hours_and_minutes(delta);
+    delta_label = format!("{hours}:{:0>2}", minutes);
     
     let work_all_times: Row<Message> = row!(
         text("Contingent: "),

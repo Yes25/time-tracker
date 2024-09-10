@@ -5,7 +5,7 @@ use jiff::Unit;
 use serde::{Deserialize, Serialize};
 
 use crate::gui::gui_logic::OneDaysWork;
-use crate::utils::format_duration;
+use crate::utils::{format_duration, compute_hours_and_minutes};
 
 #[derive(Serialize, Deserialize)]
 pub struct WorkDays {
@@ -105,20 +105,21 @@ fn serialize_to_csv(todays_work: OneDaysWork) -> String{
         Some(sum_pause) => &format_duration(&sum_pause),
         None => ""
     };
-    let contingent = sum_til_last_day-should_hours;
+    let contingent = sum_til_last_day - should_hours;
+    let (hours, minutes) = compute_hours_and_minutes(contingent);
 
     let mut write_string = format!("{date};;;;;;\n");
-    write_string = write_string + &format!(";SUM WORK;{sum_work};SUM BREAKS;{sum_pause};CONTINGENT;{contingent}\n");
+    write_string = write_string + &format!(";SUM WORK;{sum_work};SUM BREAKS;{sum_pause};CONTINGENT;{hours} : {:0>2}\n", minutes);
     write_string = write_string + ";;;;;;\n";
     write_string = write_string + ";START;END;;DURATION;BREAK;\n";
     
     for work_times in &todays_work.work_duration {
         let start = match work_times.start.as_ref() {
-            Some(start) => &start.time().round(Unit::Second).unwrap().to_string(),
+            Some(start) => &start.time().round(Unit::Minute).unwrap().to_string()[..5],
             None => ""
         };
         let end = match work_times.end.as_ref() {
-            Some(end) => &end.time().round(Unit::Second).unwrap().to_string(),
+            Some(end) => &end.time().round(Unit::Minute).unwrap().to_string()[..5],
             None => ""
         };
         let duration = match work_times.duration.as_ref() {
