@@ -15,3 +15,4 @@ rfd = "0.14.1"
 [package.metadata.bundle]
 name = "my time tracker"
 identifier = "com.my_time_tracker"
+icon = ["uhr_icon.png"]

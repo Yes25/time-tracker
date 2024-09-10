@@ -227,18 +227,12 @@ fn table_totals(one_days_work: &OneDaysWork) -> Element<'static, Message> {
         text(sum_pauses)
     );
 
-    
-    let mut delta_label = String::from("");
     let sum_til_last_day = one_days_work.sum_total;
     let should_hours = one_days_work.should_hours;
-    let mut hours: f32= 0.;
-    if let Some(sum) = one_days_work.sum_work {
-        hours = sum.get_hours() as f32;
-        hours = hours + sum.get_minutes() as f32 / 60.;
-    }
+
     let delta = sum_til_last_day - should_hours;
-    let (hours, minutes) = compute_hours_and_minutes(delta);
-    delta_label = format!("{hours}:{:0>2}", minutes);
+    let (hours_delta, minutes_delta) = compute_hours_and_minutes(delta);
+    let delta_label = format!("{hours_delta}:{:0>2}", minutes_delta);
     
     let work_all_times: Row<Message> = row!(
         text("Contingent: "),
