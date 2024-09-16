@@ -1,6 +1,6 @@
 use iced::{executor, Command};
 use iced::{Application, alignment, Element, Length, Padding};
-use iced::widget::{button, column, container, horizontal_space, row, text, vertical_space, Column, Container, Row};
+use iced::widget::{button, column, container, horizontal_rule, horizontal_space, row, text, vertical_space, Column, Container, Row};
 use jiff::Unit;
 use serde::{Deserialize, Serialize};
 
@@ -182,6 +182,12 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
         
     }
 
+    duration_col = duration_col.push(row!(horizontal_rule(4)));
+    pause_col = pause_col.push(row!(horizontal_rule(4)));
+
+    duration_col = duration_col.push(row!(text(compute_sum_one_days_work(one_days_work))));
+    pause_col = pause_col.push(row!(text(compute_sum_one_days_breaks(one_days_work))));
+
     let mut table: Row<Message> = Row::new();
         table = table.push(start_col);
         table = table.push(stop_col);
@@ -204,28 +210,6 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
 
 
 fn table_totals(one_days_work: &OneDaysWork) -> Element<'static, Message> {
-    
-    let mut sum_duration = String::from("");
-    if let Some(sum) = one_days_work.sum_work {
-        let hours = sum.get_hours().to_string();
-        let minutes = sum.get_minutes().to_string();
-        sum_duration = format!("{}:{}", hours, minutes);
-    }
-    let work_total: Row<Message> = row!(
-        text("Work total: "),
-        text(sum_duration)
-    );
-
-    let mut sum_pauses = String::from("");
-    if let Some(sum) = one_days_work.sum_pause {
-        let hours = sum.get_hours().to_string();
-        let minutes = sum.get_minutes().to_string();
-        sum_pauses = format!("{}:{}", hours, minutes);
-    }
-    let breaks_total: Row<Message> = row!(
-        text("Breaks total: "),
-        text(sum_pauses)
-    );
 
     let sum_til_last_day = one_days_work.sum_total;
     let should_hours = one_days_work.should_hours;
@@ -238,12 +222,29 @@ fn table_totals(one_days_work: &OneDaysWork) -> Element<'static, Message> {
         text("Contingent: "),
         text(delta_label)
     );
-
-
+    
     let mut table: Column<Message> = Column::new();
-        table = table.push(work_total);
-        table = table.push(breaks_total);
         table = table.push(work_all_times);
     
     table.into()
+}
+
+fn compute_sum_one_days_work(one_days_work: &OneDaysWork) -> String {
+    let mut sum_duration = String::from("");
+    if let Some(sum) = one_days_work.sum_work {
+        let hours = sum.get_hours().to_string();
+        let minutes = sum.get_minutes().to_string();
+        sum_duration = format!("{}:{}", hours, minutes);
+    }
+    sum_duration
+}
+
+fn compute_sum_one_days_breaks(one_days_work: &OneDaysWork) -> String {
+    let mut sum_pauses = String::from("");
+    if let Some(sum) = one_days_work.sum_pause {
+        let hours = sum.get_hours().to_string();
+        let minutes = sum.get_minutes().to_string();
+        sum_pauses = format!("{}:{}", hours, minutes);
+    }
+    sum_pauses
 }

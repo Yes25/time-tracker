@@ -167,14 +167,13 @@ impl OneDaysWork {
     }
 }
 
+
 fn compute_should_hours(hours_week: f32, start_day: Date) -> f32 {
     let today = Zoned::now().date();
     let work_span = today.since(start_day).unwrap();
     let work_days = work_span.get_days() as f32;
     let full_weeks = (work_days / 7.0).trunc();
     let days_this_week = work_days % 7. + 1.;
-
-    println!("weeks:{full_weeks}, days:{days_this_week}");
 
     hours_week * full_weeks + days_this_week * (hours_week / 5.)
 }
