@@ -2,6 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 use jiff::{Span, Zoned};
+use jiff::civil::Date;
 use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
@@ -61,40 +62,34 @@ pub struct OneDaysWork {
 impl OneDaysWork {
 
     pub fn init(config: &Config) -> OneDaysWork {
-        
+
         let mut path: PathBuf = env::current_exe().unwrap();
         path.set_file_name(".work_data");
         path.set_extension("json");
 
         let today = Zoned::now().date();
         let mut sum_total = 0.;
+        let should_hours = compute_should_hours(config.hours_week, config.start_date);
 
-        if let Some(work_days) =  read_work_data(&path) {
-            if let Some(last_work_day) = work_days.states.last() {
+        if let Some(mut work_days) =  read_work_data(&path) {
+            if let Some(last_work_day) = work_days.states.last_mut() {
                 sum_total = last_work_day.sum_total;
                 if let Some(date) = &last_work_day.date {
                     if date.date() == today {
+                        last_work_day.should_hours = should_hours;
                         return last_work_day.to_owned();
-                    } 
+                    }
                 }
             };
-            
         }
-        
-        let hours_week = config.hours_week;
-        let start_day = config.start_date;
-
-        let work_span = today.since(start_day).unwrap();
-        let work_days = (work_span.get_days() + 1) as f32 ;     // + 1 because today is not elapsed, hence it os not in get_days. But we want to know how much I should have worked at the end of today 
-        let should_hours = work_days * (hours_week / 5.);
 
         OneDaysWork {
             sum_total,
-            should_hours: should_hours,
+            should_hours,
             date: None,
             work_duration: vec![],
             sum_work: None,
-            sum_pause: None, 
+            sum_pause: None,
         }
     }   
     
@@ -170,4 +165,16 @@ impl OneDaysWork {
         }
         self.sum_pause = Some(sum);
     }
+}
+
+fn compute_should_hours(hours_week: f32, start_day: Date) -> f32 {
+    let today = Zoned::now().date();
+    let work_span = today.since(start_day).unwrap();
+    let work_days = work_span.get_days() as f32;
+    let full_weeks = (work_days / 7.0).trunc();
+    let days_this_week = work_days % 7. + 1.;
+
+    println!("weeks:{full_weeks}, days:{days_this_week}");
+
+    hours_week * full_weeks + days_this_week * (hours_week / 5.)
 }
