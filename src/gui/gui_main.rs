@@ -1,8 +1,10 @@
 use iced::Task;
 use iced::{alignment, Element, Length, Padding};
-use iced::widget::{button, column, container, horizontal_rule, horizontal_space, row, text, vertical_space, Column, Container, Row};
+use iced::widget::{button, column, container, horizontal_rule, horizontal_space, row, text, vertical_space, Button, Column, Container, Row, Text};
+use iced_aw::{date_picker::Date, helpers::date_picker};
 use jiff::Unit;
 use serde::{Deserialize, Serialize};
+
 
 use crate::config::{get_config, Config};
 use crate::utils::{compute_hours_and_minutes, format_duration};
@@ -13,6 +15,7 @@ use crate::gui::serialize::{update_work_data, export};
 pub struct App {
     pub config: Config,
     pub state: State,
+    pub show_picker: bool,
     pub todays_work: OneDaysWork,
 }
 
@@ -30,6 +33,7 @@ fn init_app_state() -> App {
     App {
         config,
         state,
+        show_picker: false,
         todays_work,
     } 
 }
@@ -38,7 +42,10 @@ fn init_app_state() -> App {
 pub enum Message {
     Start,
     Stop,
-    Export
+    Export,
+    ChooseDate,
+    SubmitDate(Date),
+    CancelDate,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -76,6 +83,16 @@ impl App {
             Message::Export => {
                 export();
             }
+            Message::ChooseDate => {
+                self.show_picker = true;
+            }
+            Message::SubmitDate(date) => {
+                dbg!(date);
+                self.show_picker = false;
+            }
+            Message::CancelDate => {
+                self.show_picker = false;
+            }
         } 
 
         Task::none()
@@ -89,11 +106,38 @@ impl App {
             State::Started => (start_btn, stop_btn.on_press(Message::Stop))
         };
 
-        
-        
+        let mut date_label = "".to_owned();
+        let mut picker_date = Date::today();
+        if let Some(date) = &self.todays_work.date {
+            date_label = date.date().to_string();
+            picker_date.year = date.year() as i32;
+            picker_date.month = date.month() as u32;
+            picker_date.day = date.day() as u32;
+        }
+
+        let date_btn = Button::new(Text::new("Date"))
+            .on_press(Message::ChooseDate)
+            .padding(Padding{top: 5., right: 5., bottom:5., left:5.});
+
+        let datepicker = date_picker(
+            self.show_picker,
+            picker_date,
+            date_btn,
+            Message::CancelDate,
+            Message::SubmitDate,
+        ).font_size(12);
+
+
         let main_container = Container::new(
             row!(
                 column!(
+                    row!(
+                        datepicker,
+                        container(
+                            text(date_label)
+                        ).padding(Padding{top: 3., right: 5., bottom:0., left:15.})
+                    )
+                    .padding(Padding{top: 0., right: 0., bottom:7., left:0.}),
                     one_days_work(&self.todays_work),
                 )
                 .padding(Padding::from(10))
@@ -132,14 +176,8 @@ impl App {
 
 }
 
+
 fn one_days_work(one_days_work: &OneDaysWork) -> Element<Message> {
-    
-    let mut date_label = "".to_owned();
-    
-    if let Some(date) = &one_days_work.date {
-        date_label = date.date().to_string();
-    }
-    
     let padding = Padding{top: 2., left: 5., bottom: 2., right: 0.};
     let col_width = 75;
 
@@ -186,15 +224,9 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<Message> {
         table = table.push(duration_col);
         table = table.push(pause_col);
 
+
     let one_days_work_wideget = container(
-        column!(
-            row!(
-                text("Date: "),
-                text(date_label),
-            )
-            .padding(Padding{top: 0., right: 0., bottom:7., left:0.}),
-            table,
-        )
+            table
     );
 
     one_days_work_wideget.into()
@@ -221,6 +253,7 @@ fn table_totals(one_days_work: &OneDaysWork) -> Element<'static, Message> {
     table.into()
 }
 
+
 fn compute_sum_one_days_work(one_days_work: &OneDaysWork) -> String {
     let mut sum_duration = String::from("");
     if let Some(sum) = one_days_work.sum_work {
@@ -230,6 +263,7 @@ fn compute_sum_one_days_work(one_days_work: &OneDaysWork) -> String {
     }
     sum_duration
 }
+
 
 fn compute_sum_one_days_breaks(one_days_work: &OneDaysWork) -> String {
     let mut sum_pauses = String::from("");
