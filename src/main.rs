@@ -8,21 +8,13 @@ mod gui {
 mod config;
 mod utils;
 
-use crate::gui::gui_main::AppState;
+use crate::gui::gui_main::App;
 
-use iced::{window, Application, Settings};
+use iced:: Size;
 
-fn  main() {
-
-    let settings: Settings<()> = iced::settings::Settings {
-        window: window::Settings {
-            size: iced::Size::new(500.0, 200.0),
-            resizable: true,
-            decorations: true,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-
-    let _ = AppState::run(settings);
+fn  main() -> iced::Result {
+    iced::application("My Time Tracker", App::update, App::view)
+        .theme(App::theme)
+        .window_size(Size::new(500., 200.))
+        .run_with(App::new)
 }

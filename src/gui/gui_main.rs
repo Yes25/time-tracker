@@ -1,5 +1,5 @@
-use iced::{executor, Command};
-use iced::{Application, alignment, Element, Length, Padding};
+use iced::Task;
+use iced::{alignment, Element, Length, Padding};
 use iced::widget::{button, column, container, horizontal_rule, horizontal_space, row, text, vertical_space, Column, Container, Row};
 use jiff::Unit;
 use serde::{Deserialize, Serialize};
@@ -10,13 +10,13 @@ use crate::gui::gui_logic::OneDaysWork;
 use crate::gui::serialize::{update_work_data, export};
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct AppState {
+pub struct App {
     pub config: Config,
     pub state: State,
     pub todays_work: OneDaysWork,
 }
 
-fn init_app_state() -> AppState {
+fn init_app_state() -> App {
     let config = get_config();
     let todays_work = OneDaysWork::init(&config);
 
@@ -27,7 +27,7 @@ fn init_app_state() -> AppState {
         }
     }
 
-    AppState {
+    App {
         config,
         state,
         todays_work,
@@ -47,28 +47,20 @@ pub enum State {
     Stopped
 } 
 
-impl Application for AppState {
-    type Executor = executor::Default;
-    type Flags = ();
-    type Theme = iced::Theme;
-	type Message = Message;
+impl App {
 	
-	fn new(_flags: ()) -> (AppState, Command<Self::Message>) {
+	pub(crate) fn new() -> (Self, Task<Message>) {
 		(
-            init_app_state(), 
-            Command::none()
+            init_app_state(),
+            Task::none()
         )
 	}
-	
-	fn title(&self) -> String {
-		String::from("My Time Tracker")
-	}
     
-    fn theme(&self) -> iced::Theme {
-        iced::Theme::Dark
+    pub(crate) fn theme(&self) -> iced::Theme {
+        iced::Theme::TokyoNightStorm
 	}
 
-    fn update(&mut self, message: Self::Message) -> Command<Message> {
+    pub(crate) fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Start => {
                 self.todays_work.start();
@@ -86,10 +78,10 @@ impl Application for AppState {
             }
         } 
 
-        Command::none()
+        Task::none()
     }
 
-	fn view(&self) -> Element<Self::Message> {
+	pub(crate) fn view(&self) -> Element<Message> {
         let start_btn = button("Start");
         let stop_btn= button("Stop");
         let (start_btn, stop_btn) = match &self.state {
@@ -140,7 +132,7 @@ impl Application for AppState {
 
 }
 
-fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
+fn one_days_work(one_days_work: &OneDaysWork) -> Element<Message> {
     
     let mut date_label = "".to_owned();
     
@@ -175,10 +167,10 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<'static, Message> {
             pause_label = format_duration(pause);
         }
 
-        start_col = start_col.push(row!(text(&start_label)));
-        stop_col = stop_col.push(row!(text(&stop_label)));
-        duration_col = duration_col.push(row!(text(&duration_label)));
-        pause_col = pause_col.push(row!(text(&pause_label)));
+        start_col = start_col.push(row!(text(start_label)));
+        stop_col = stop_col.push(row!(text(stop_label)));
+        duration_col = duration_col.push(row!(text(duration_label)));
+        pause_col = pause_col.push(row!(text(pause_label)));
         
     }
 

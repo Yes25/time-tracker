@@ -6,7 +6,7 @@ pub fn format_duration(span: &Span) -> String {
     format!("{hours}:{minutes}")
 }
 
-// returns hours and minutes from an fractional hour value, like 2.7h
+// returns hours and minutes from a fractional hour value, like 2.7h
 pub fn compute_hours_and_minutes(input_hours: f32) -> (i32, i32) {
     let hours = input_hours.trunc() as i32;
     let fraction = input_hours.fract();
