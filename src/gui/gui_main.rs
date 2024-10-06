@@ -1,7 +1,7 @@
 use iced::Task;
 use iced::{alignment, Element, Length, Padding};
 use iced::widget::{button, column, container, horizontal_rule, horizontal_space, row, text, vertical_space, Button, Column, Container, Row, Text};
-use iced_aw::{date_picker::Date, helpers::date_picker};
+use iced_aw::{date_picker, date_picker::Date};
 use jiff::Unit;
 use serde::{Deserialize, Serialize};
 
@@ -73,8 +73,7 @@ impl App {
                 self.todays_work.start();
                 self.state = State::Started;
                 update_work_data(self.todays_work.clone());
-
-            },
+            }
             Message::Stop => {
                 self.todays_work.stop();
                 self.state = State::Stopped;
@@ -93,64 +92,23 @@ impl App {
             Message::CancelDate => {
                 self.show_picker = false;
             }
-        } 
-
+        }
         Task::none()
     }
 
 	pub(crate) fn view(&self) -> Element<Message> {
-        let start_btn = button("Start");
-        let stop_btn= button("Stop");
-        let (start_btn, stop_btn) = match &self.state {
-            State::Stopped => (start_btn.on_press(Message::Start), stop_btn),
-            State::Started => (start_btn, stop_btn.on_press(Message::Stop))
-        };
-
-        let mut date_label = "".to_owned();
-        let mut picker_date = Date::today();
-        if let Some(date) = &self.todays_work.date {
-            date_label = date.date().to_string();
-            picker_date.year = date.year() as i32;
-            picker_date.month = date.month() as u32;
-            picker_date.day = date.day() as u32;
-        }
-
-        let date_btn = Button::new(Text::new("Date"))
-            .on_press(Message::ChooseDate)
-            .padding(Padding{top: 5., right: 5., bottom:5., left:5.});
-
-        let datepicker = date_picker(
-            self.show_picker,
-            picker_date,
-            date_btn,
-            Message::CancelDate,
-            Message::SubmitDate,
-        ).font_size(12);
-
 
         let main_container = Container::new(
             row!(
                 column!(
-                    row!(
-                        datepicker,
-                        container(
-                            text(date_label)
-                        ).padding(Padding{top: 3., right: 5., bottom:0., left:15.})
-                    )
-                    .padding(Padding{top: 0., right: 0., bottom:7., left:0.}),
+                    date_section(self),
                     one_days_work(&self.todays_work),
                 )
                 .padding(Padding::from(10))
                 .height(Length::Fill)
                 .width(Length::FillPortion(4)),
                 column!(
-                    row!(
-                        start_btn,
-                        stop_btn,
-                    )
-                    .spacing(15)
-                    .padding(Padding::from(10))
-                    .width(Length::Fill),
+                    start_stop_btn(&self.state),
                     table_totals(&self.todays_work),
                     vertical_space(),
                     row!(
@@ -163,7 +121,6 @@ impl App {
                 )
                 .height(Length::Fill)
                 .width(Length::FillPortion(2)),
-
             )
         );
         
@@ -173,7 +130,58 @@ impl App {
         .align_y(alignment::Vertical::Center)
         .into()
     }
+}
 
+
+fn start_stop_btn(state: &State) -> Element<Message> {
+    let start_btn = button("Start");
+    let stop_btn= button("Stop");
+    let (start_btn, stop_btn) = match state {
+        State::Stopped => (start_btn.on_press(Message::Start), stop_btn),
+        State::Started => (start_btn, stop_btn.on_press(Message::Stop))
+    };
+
+    row!(
+        start_btn,
+        stop_btn,
+    )
+    .spacing(15)
+    .padding(Padding::from(10))
+    .width(Length::Fill)
+    .into()
+}
+
+
+fn date_section(app: &App) -> Element<Message> {
+
+    let mut date_label = "".to_owned();
+    let mut picker_date = Date::today();
+    if let Some(date) = &app.todays_work.date {
+        date_label = date.date().to_string();
+        picker_date.year = date.year() as i32;
+        picker_date.month = date.month() as u32;
+        picker_date.day = date.day() as u32;
+    }
+
+    let date_btn = Button::new(Text::new("Date"))
+        .on_press(Message::ChooseDate)
+        .padding(Padding{top: 5., right: 5., bottom:5., left:5.});
+
+    let date_picker = date_picker(
+        app.show_picker,
+        picker_date,
+        date_btn,
+        Message::CancelDate,
+        Message::SubmitDate,
+    ).font_size(12);
+
+    row!(
+        date_picker,
+        container(
+            text(date_label)
+        ).padding(Padding{top: 3., right: 5., bottom:0., left:15.})
+    ).padding(Padding{top: 0., right: 0., bottom:7., left:0.})
+    .into()
 }
 
 
@@ -225,11 +233,11 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<Message> {
         table = table.push(pause_col);
 
 
-    let one_days_work_wideget = container(
+    let one_days_work_widget = container(
             table
     );
 
-    one_days_work_wideget.into()
+    one_days_work_widget.into()
 }
 
 
