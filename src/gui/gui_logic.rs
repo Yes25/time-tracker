@@ -1,12 +1,5 @@
-use std::env;
-use std::path::PathBuf;
-
 use jiff::{Span, Zoned};
-use jiff::civil::Date;
 use serde::{Deserialize, Serialize};
-
-use crate::config::Config;
-use crate::gui::serialize::read_work_data;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct WorkTimes {
@@ -51,9 +44,7 @@ impl WorkTimes {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OneDaysWork {
-    pub sum_total: f32,
-    pub should_hours: f32,
-    pub date: Option<Zoned>,
+    pub date: jiff::civil::Date,
     pub work_duration: Vec<WorkTimes>,
     pub sum_work: Option<Span>,
     pub sum_pause: Option<Span>,
@@ -61,41 +52,8 @@ pub struct OneDaysWork {
 
 impl OneDaysWork {
 
-    pub fn init(config: &Config) -> OneDaysWork {
-
-        let mut path: PathBuf = env::current_exe().unwrap();
-        path.set_file_name(".work_data");
-        path.set_extension("json");
-
-        let today = Zoned::now().date();
-        let mut sum_total = 0.;
-        let should_hours = compute_should_hours(config.hours_week, config.start_date);
-
-        if let Some(mut work_days) =  read_work_data(&path) {
-            if let Some(last_work_day) = work_days.states.last_mut() {
-                sum_total = last_work_day.sum_total;
-                if let Some(date) = &last_work_day.date {
-                    if date.date() == today {
-                        last_work_day.should_hours = should_hours;
-                        return last_work_day.to_owned();
-                    }
-                }
-            };
-        }
-
-        OneDaysWork {
-            sum_total,
-            should_hours,
-            date: None,
-            work_duration: vec![],
-            sum_work: None,
-            sum_pause: None,
-        }
-    }   
-    
-
     pub fn set_date(&mut self) {
-        self.date = Some(Zoned::now())
+        self.date = Zoned::now().date()
     }
 
     pub fn start(&mut self) {
@@ -135,9 +93,6 @@ impl OneDaysWork {
                 let duration = start.until(&stop).unwrap();
                 self.work_duration.last_mut().unwrap().duration = Some(duration);
                 self.sum_durations();
-                let hours = duration.get_hours() as f32;
-                let minutes = duration.get_minutes() as f32 / 60.;
-                self.sum_total = self.sum_total + hours + minutes
             }
         }
     }
@@ -165,15 +120,4 @@ impl OneDaysWork {
         }
         self.sum_pause = Some(sum);
     }
-}
-
-
-fn compute_should_hours(hours_week: f32, start_day: Date) -> f32 {
-    let today = Zoned::now().date();
-    let work_span = today.since(start_day).unwrap();
-    let work_days = work_span.get_days() as f32;
-    let full_weeks = (work_days / 7.0).trunc();
-    let days_this_week = work_days % 7. + 1.;
-
-    hours_week * full_weeks + days_this_week * (hours_week / 5.)
 }

@@ -1,30 +1,32 @@
+use std::collections::HashMap;
 use iced::Task;
 use iced::{alignment, Element, Length, Padding};
 use iced::widget::{button, column, container, horizontal_rule, horizontal_space, row, text, vertical_space, Button, Column, Container, Row, Text};
 use iced_aw::{date_picker, date_picker::Date};
-use jiff::Unit;
+use jiff::{SpanRound, Unit, Zoned};
 use serde::{Deserialize, Serialize};
 
-
 use crate::config::{get_config, Config};
-use crate::utils::{compute_hours_and_minutes, format_duration};
-use crate::gui::gui_logic::OneDaysWork;
-use crate::gui::serialize::{update_work_data, export};
+use crate::utils::{compute_hours_and_minutes, compute_should_hours, format_duration, jiff_date_from_picker};
+use crate::gui::gui_logic::{OneDaysWork};
+use crate::gui::serialize::{export, init_calendar, Calendar};
+
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct App {
     pub config: Config,
     pub state: State,
     pub show_picker: bool,
-    pub todays_work: OneDaysWork,
+    pub date: jiff::civil::Date,
+    pub calendar: HashMap<String, OneDaysWork>,
 }
 
 fn init_app_state() -> App {
     let config = get_config();
-    let todays_work = OneDaysWork::init(&config);
+    let calendar = init_calendar();
 
     let mut state = State::Stopped;
-    if let Some(todays_work) = todays_work.work_duration.last() {
+    if let Some(todays_work) = calendar.get(&Zoned::now().date().to_string()).unwrap().work_duration.last() {
         if  todays_work.end.is_none() && todays_work.start.is_some()  {
             state = State::Started
         }
@@ -33,9 +35,10 @@ fn init_app_state() -> App {
     App {
         config,
         state,
+        date: Zoned::now().date(),
         show_picker: false,
-        todays_work,
-    } 
+        calendar,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +54,8 @@ pub enum Message {
 #[derive(Serialize, Deserialize, Clone)]
 pub enum State {
     Started,
-    Stopped
+    Stopped,
+    NotToday,
 } 
 
 impl App {
@@ -70,24 +74,43 @@ impl App {
     pub(crate) fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Start => {
-                self.todays_work.start();
+                self.calendar.get_mut(&Zoned::now().date().to_string()).unwrap().start();
                 self.state = State::Started;
-                update_work_data(self.todays_work.clone());
+                Calendar::update(&self.calendar);
             }
             Message::Stop => {
-                self.todays_work.stop();
+                self.calendar.get_mut(&Zoned::now().date().to_string()).unwrap().stop();
                 self.state = State::Stopped;
-                update_work_data(self.todays_work.clone());
+                Calendar::update(&self.calendar);
             }
             Message::Export => {
-                export();
+                export(&self.config);
             }
             Message::ChooseDate => {
                 self.show_picker = true;
             }
             Message::SubmitDate(date) => {
-                dbg!(date);
+                let date = jiff_date_from_picker(date);
+                if let None = self.calendar.get(&date.to_string()) {
+                    self.calendar.insert(date.to_string(), OneDaysWork {
+                        date,
+                        work_duration: vec![],
+                        sum_work: None,
+                        sum_pause: None,
+                    });
+                    }
+                self.date = date;
                 self.show_picker = false;
+                if date != Zoned::now().date() {
+                    self.state = State::NotToday;
+                } else {
+                    self.state = State::Stopped;
+                    if let Some(todays_work) = self.calendar.get(&Zoned::now().date().to_string()).unwrap().work_duration.last() {
+                        if  todays_work.end.is_none() && todays_work.start.is_some()  {
+                            self.state = State::Started
+                        }
+                    }
+                }
             }
             Message::CancelDate => {
                 self.show_picker = false;
@@ -102,14 +125,14 @@ impl App {
             row!(
                 column!(
                     date_section(self),
-                    one_days_work(&self.todays_work),
+                    one_days_work(&self.calendar.get(&self.date.to_string()).unwrap()),
                 )
                 .padding(Padding::from(10))
                 .height(Length::Fill)
                 .width(Length::FillPortion(4)),
                 column!(
                     start_stop_btn(&self.state),
-                    table_totals(&self.todays_work),
+                    table_totals(self),
                     vertical_space(),
                     row!(
                         horizontal_space(),
@@ -130,6 +153,18 @@ impl App {
         .align_y(alignment::Vertical::Center)
         .into()
     }
+
+    fn total_worked_hours(&self) -> f32 {
+        let mut sum: f32 = 0.;
+        for work_day in self.calendar.values() {
+            if let Some(work_hours) = work_day.sum_work {
+                let hours = work_hours.get_hours() as f32;
+                let minutes = work_hours.get_minutes() as f32 / 60.;
+                sum += hours + minutes;
+            }
+        }
+        sum
+    }
 }
 
 
@@ -138,7 +173,8 @@ fn start_stop_btn(state: &State) -> Element<Message> {
     let stop_btn= button("Stop");
     let (start_btn, stop_btn) = match state {
         State::Stopped => (start_btn.on_press(Message::Start), stop_btn),
-        State::Started => (start_btn, stop_btn.on_press(Message::Stop))
+        State::Started => (start_btn, stop_btn.on_press(Message::Stop)),
+        State::NotToday => (start_btn, stop_btn),
     };
 
     row!(
@@ -153,15 +189,13 @@ fn start_stop_btn(state: &State) -> Element<Message> {
 
 
 fn date_section(app: &App) -> Element<Message> {
-
-    let mut date_label = "".to_owned();
     let mut picker_date = Date::today();
-    if let Some(date) = &app.todays_work.date {
-        date_label = date.date().to_string();
-        picker_date.year = date.year() as i32;
-        picker_date.month = date.month() as u32;
-        picker_date.day = date.day() as u32;
-    }
+
+    let date_label = app.date.to_string();
+    picker_date.year = app.date.year() as i32;
+    picker_date.month = app.date.month() as u32;
+    picker_date.day = app.date.day() as u32;
+
 
     let date_btn = Button::new(Text::new("Date"))
         .on_press(Message::ChooseDate)
@@ -241,14 +275,18 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<Message> {
 }
 
 
-fn table_totals(one_days_work: &OneDaysWork) -> Element<'static, Message> {
+fn table_totals(app: &App) -> Element<'static, Message> {
 
-    let sum_til_last_day = one_days_work.sum_total;
-    let should_hours = one_days_work.should_hours;
+    let should_hours = compute_should_hours(&app.config);
+    let sum_til_last_day = app.total_worked_hours();
 
     let delta = sum_til_last_day - should_hours;
     let (hours_delta, minutes_delta) = compute_hours_and_minutes(delta);
-    let delta_label = format!("{hours_delta}:{:0>2}", minutes_delta);
+    let mut sign = "+";
+    if delta < 0. {
+        sign = "-";
+    }
+    let delta_label = format!("{sign} {}:{:0>2}", hours_delta.abs(), minutes_delta.abs());
     
     let work_all_times: Row<Message> = row!(
         text("Contingent: "),
@@ -265,6 +303,7 @@ fn table_totals(one_days_work: &OneDaysWork) -> Element<'static, Message> {
 fn compute_sum_one_days_work(one_days_work: &OneDaysWork) -> String {
     let mut sum_duration = String::from("");
     if let Some(sum) = one_days_work.sum_work {
+        let sum = sum.round(SpanRound::new().largest(Unit::Hour)).unwrap();
         let hours = sum.get_hours().to_string();
         let minutes = sum.get_minutes().to_string();
         sum_duration = format!("{}:{}", hours, minutes);
@@ -276,6 +315,7 @@ fn compute_sum_one_days_work(one_days_work: &OneDaysWork) -> String {
 fn compute_sum_one_days_breaks(one_days_work: &OneDaysWork) -> String {
     let mut sum_pauses = String::from("");
     if let Some(sum) = one_days_work.sum_pause {
+        let sum = sum.round(SpanRound::new().largest(Unit::Hour)).unwrap();
         let hours = sum.get_hours().to_string();
         let minutes = sum.get_minutes().to_string();
         sum_pauses = format!("{}:{}", hours, minutes);
