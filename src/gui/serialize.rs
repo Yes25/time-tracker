@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use crate::gui::gui_main::Location;
 
 #[derive(Serialize, Deserialize)]
 pub struct Calendar {
@@ -48,9 +49,11 @@ pub fn init_calendar() -> HashMap<String, OneDaysWork> {
                 today.to_string(),
                 OneDaysWork {
                     date: today,
+                    location: Some(Location::Homeoffice),
                     work_duration: vec![],
                     sum_work: None,
                     sum_pause: None,
+                    vacation: false,
                 },
             );
             calendar
@@ -64,9 +67,11 @@ pub fn init_calendar() -> HashMap<String, OneDaysWork> {
                         today.to_string(),
                         OneDaysWork {
                             date: today,
+                            location: Some(Location::Homeoffice),
                             work_duration: vec![],
                             sum_work: None,
                             sum_pause: None,
+                            vacation: false,
                         },
                     );
                     return calendar;

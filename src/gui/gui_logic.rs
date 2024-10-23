@@ -1,5 +1,6 @@
 use jiff::{Span, Zoned};
 use serde::{Deserialize, Serialize};
+use crate::gui::gui_main::Location;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct WorkTimes {
@@ -45,9 +46,11 @@ impl WorkTimes {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OneDaysWork {
     pub date: jiff::civil::Date,
+    pub location: Option<Location>,
     pub work_duration: Vec<WorkTimes>,
     pub sum_work: Option<Span>,
     pub sum_pause: Option<Span>,
+    pub vacation: bool,
 }
 
 impl OneDaysWork {

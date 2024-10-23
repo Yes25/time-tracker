@@ -8,8 +8,8 @@ iced = "0.13.1"
 iced_aw = { version = "0.11.0", default-features = false, features = ["menu", "date_picker"] }
 jiff = { version = "0.1.13", features = ["serde"] }
 # rusqlite = { version = "0.32.0", features = ["bundled"] }
-serde = {version = "1.0.210", features = ["derive"]}
-serde_json = "1.0.128"
+serde = {version = "1.0.213", features = ["derive"]}
+serde_json = "1.0.132"
 rfd = "0.15.0"
 
 [package.metadata.bundle]

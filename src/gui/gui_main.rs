@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use iced::Task;
 use iced::{alignment, Element, Length, Padding};
-use iced::widget::{button, column, container, horizontal_rule, horizontal_space, row, text, vertical_space, Button, Column, Container, Row, Text};
+use iced::widget::{button, checkbox, column, container, horizontal_rule, horizontal_space, pick_list, row, text, vertical_space, Button, Column, Container, Row, Text};
 use iced_aw::{date_picker, date_picker::Date};
-use jiff::{SpanRound, Unit, Zoned};
+use jiff::{Span, SpanRound, Unit, Zoned};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{get_config, Config};
@@ -11,6 +11,32 @@ use crate::utils::{compute_hours_and_minutes, compute_should_hours, format_durat
 use crate::gui::gui_logic::{OneDaysWork};
 use crate::gui::serialize::{export, init_calendar, Calendar};
 
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Location {
+    Homeoffice,
+    Office,
+}
+
+impl Location {
+    const ALL: [Location; 2] = [
+        Location::Homeoffice,
+        Location::Office,
+    ];
+}
+
+impl std::fmt::Display for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Location::Homeoffice => "home-office",
+                Location::Office => "office",
+            }
+        )
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct App {
@@ -49,6 +75,8 @@ pub enum Message {
     ChooseDate,
     SubmitDate(Date),
     CancelDate,
+    LocationSelected(Location),
+    VacationToggled(bool),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -94,9 +122,11 @@ impl App {
                 if let None = self.calendar.get(&date.to_string()) {
                     self.calendar.insert(date.to_string(), OneDaysWork {
                         date,
+                        location: Some(Location::Homeoffice),
                         work_duration: vec![],
                         sum_work: None,
                         sum_pause: None,
+                        vacation: false,
                     });
                     }
                 self.date = date;
@@ -115,11 +145,42 @@ impl App {
             Message::CancelDate => {
                 self.show_picker = false;
             }
+            Message::LocationSelected(location) => {
+                self.calendar.get_mut(&self.date.to_string()).unwrap().location = Some(location);
+                Calendar::update(&self.calendar);
+            }
+            Message::VacationToggled(is_vacation) => {
+                self.calendar.get_mut(&self.date.to_string()).unwrap().vacation = is_vacation;
+                if is_vacation {
+                    if let Some(sum_work) = self.calendar.get(&self.date.to_string()).unwrap().sum_work {
+                        let hours = (self.config.hours_week / 5.).trunc() as i64;
+                        let mins = ((self.config.hours_week / 5.).fract() * 60.) as i64;
+                        let work_hours: Span = Span::new().hours(hours).minutes(mins);
+                        //TODO: Seems not to work jet...
+                        self.calendar.get_mut(&self.date.to_string()).unwrap().sum_work = Some(sum_work.checked_add(work_hours).unwrap());
+                    }
+                } else {
+
+                }
+                Calendar::update(&self.calendar);
+            }
         }
         Task::none()
     }
 
 	pub(crate) fn view(&self) -> Element<Message> {
+
+        let pick_list = row!(pick_list(
+            &Location::ALL[..],
+            self.calendar.get(&self.date.to_string()).unwrap().location,
+            Message::LocationSelected,
+        ))
+            .width(Length::Fill)
+            .padding(Padding{top:5., right:0., bottom:5., left:10.});
+
+        let vacation_checkbox = row!(checkbox("Vacation", self.calendar.get(&self.date.to_string()).unwrap().vacation)
+            .on_toggle(Message::VacationToggled))
+            .padding(Padding{top:5., right:0., bottom:25., left:10.});
 
         let main_container = Container::new(
             row!(
@@ -132,6 +193,8 @@ impl App {
                 .width(Length::FillPortion(4)),
                 column!(
                     start_stop_btn(&self.state),
+                    pick_list,
+                    vacation_checkbox,
                     table_totals(self),
                     vertical_space(),
                     row!(
@@ -181,7 +244,7 @@ fn start_stop_btn(state: &State) -> Element<Message> {
         start_btn,
         stop_btn,
     )
-    .spacing(15)
+    .spacing(23)
     .padding(Padding::from(10))
     .width(Length::Fill)
     .into()
@@ -214,7 +277,7 @@ fn date_section(app: &App) -> Element<Message> {
         container(
             text(date_label)
         ).padding(Padding{top: 3., right: 5., bottom:0., left:15.})
-    ).padding(Padding{top: 0., right: 0., bottom:7., left:0.})
+    ).padding(Padding{top: 0., right: 0., bottom:15., left:0.})
     .into()
 }
 
@@ -291,7 +354,8 @@ fn table_totals(app: &App) -> Element<'static, Message> {
     let work_all_times: Row<Message> = row!(
         text("Contingent: "),
         text(delta_label)
-    );
+    )
+        .padding(Padding{top: 5., right: 0., bottom:5., left:10.});
     
     let mut table: Column<Message> = Column::new();
         table = table.push(work_all_times);

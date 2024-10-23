@@ -14,7 +14,7 @@ pub fn compute_hours_and_minutes(input_hours: f32) -> (i32, i32) {
     let hours = input_hours.trunc() as i32;
     let fraction = input_hours.fract();
     let minutes = (fraction * 60.0) as i32;
-
+    
     (hours, minutes)
 }
 

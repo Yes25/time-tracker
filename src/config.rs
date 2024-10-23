@@ -9,7 +9,7 @@ use jiff::civil::date;
 use jiff::civil::Date;
 use jiff::Zoned;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Config {
     pub hours_week: f32,
     pub start_date: Date,
