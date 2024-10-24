@@ -24,8 +24,11 @@ impl Calendar {
     }
 
     pub fn update(cal_map: &HashMap<String, OneDaysWork>) {
+        let mut work_days:Vec<OneDaysWork> = cal_map.values().cloned().collect();
+        work_days.sort_by(|a, b| a.date.cmp(&b.date));
+
         let cal = Calendar {
-            work_days: cal_map.values().cloned().collect(),
+            work_days,
         };
 
         let mut path: PathBuf = env::current_exe().unwrap();
