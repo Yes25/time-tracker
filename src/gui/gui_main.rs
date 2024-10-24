@@ -6,7 +6,7 @@ use iced_aw::{date_picker, date_picker::Date};
 use jiff::{Span, SpanRound, Unit, Zoned};
 use serde::{Deserialize, Serialize};
 
-use crate::config::{get_config, Config};
+use crate::config::Config;
 use crate::utils::{compute_hours_and_minutes, compute_should_hours, format_duration, jiff_date_from_picker};
 use crate::gui::gui_logic::{OneDaysWork};
 use crate::gui::serialize::{export, init_calendar, Calendar};
@@ -48,7 +48,7 @@ pub struct App {
 }
 
 fn init_app_state() -> App {
-    let config = get_config();
+    let config = Config::get_config();
     let calendar = init_calendar();
 
     let mut state = State::Stopped;
@@ -151,16 +151,21 @@ impl App {
             }
             Message::VacationToggled(is_vacation) => {
                 self.calendar.get_mut(&self.date.to_string()).unwrap().vacation = is_vacation;
-                if is_vacation {
-                    if let Some(sum_work) = self.calendar.get(&self.date.to_string()).unwrap().sum_work {
-                        let hours = (self.config.hours_week / 5.).trunc() as i64;
-                        let mins = ((self.config.hours_week / 5.).fract() * 60.) as i64;
-                        let work_hours: Span = Span::new().hours(hours).minutes(mins);
-                        //TODO: Seems not to work jet...
-                        self.calendar.get_mut(&self.date.to_string()).unwrap().sum_work = Some(sum_work.checked_add(work_hours).unwrap());
-                    }
-                } else {
 
+                let work_hours= self.config.get_workday_span();
+
+                if is_vacation {
+                    let mut work = Span::new();
+                    if let Some(sum_work) = self.calendar.get(&self.date.to_string()).unwrap().sum_work {
+                        work = sum_work;
+                    }
+                    let new_sum = work.checked_add(work_hours).unwrap();
+                    self.calendar.get_mut(&self.date.to_string()).unwrap().sum_work = Some(new_sum);
+                } else {
+                    if let Some(sum_work) = self.calendar.get(&self.date.to_string()).unwrap().sum_work {
+                        let new_sum = sum_work.checked_sub(work_hours).unwrap();
+                        self.calendar.get_mut(&self.date.to_string()).unwrap().sum_work = Some(new_sum);
+                    }
                 }
                 Calendar::update(&self.calendar);
             }

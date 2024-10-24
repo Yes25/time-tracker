@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use jiff::civil::date;
 use jiff::civil::Date;
-use jiff::Zoned;
+use jiff::{Span, Zoned};
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Config {
@@ -15,17 +15,24 @@ pub struct Config {
     pub start_date: Date,
 }
 
-pub fn get_config() -> Config {
-    let mut path = env::current_exe().unwrap();
-    path.set_file_name(".config");
-    path.set_extension("txt");
+impl Config {
+    pub fn get_config() -> Config {
+        let mut path = env::current_exe().unwrap();
+        path.set_file_name(".config");
+        path.set_extension("txt");
 
-    if !path.exists() {
-        write_new_config_file(&path);
+        if !path.exists() {
+            write_new_config_file(&path);
+        }
+        read_config_file(&path)
     }
-    read_config_file(&path)
-}
 
+    pub fn get_workday_span(&self) -> Span {
+        let hours = (self.hours_week / 5.).trunc() as i64;
+        let mins = ((self.hours_week / 5.).fract() * 60.) as i64;
+        Span::new().hours(hours).minutes(mins)
+    }
+}
 
 fn write_new_config_file(path: &PathBuf) {
     let today = Zoned::now().date().to_string();

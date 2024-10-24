@@ -7,6 +7,7 @@ mod gui {
 }
 mod config;
 mod utils;
+mod tests;
 
 use crate::gui::gui_main::App;
 
