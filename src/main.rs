@@ -15,7 +15,7 @@ use iced:: Size;
 use iced_aw::iced_fonts;
 
 fn  main() -> iced::Result {
-    iced::application("My Time Tracker", App::update, App::view)
+    iced::application("Time Tracker", App::update, App::view)
         .theme(App::theme)
         .font(iced_fonts::REQUIRED_FONT_BYTES)
         .window_size(Size::new(500., 300.))
