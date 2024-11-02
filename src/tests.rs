@@ -41,5 +41,21 @@ mod tests {
         let from =  Date::new(2024, 11, 4).unwrap();
         let to =  Date::new(2024, 11, 6).unwrap();
         assert_eq!(get_num_workdays(from, to), 3.);
+
+        let from =  Date::new(2024, 11, 1).unwrap();
+        let to =  Date::new(2024, 11, 4).unwrap();
+        assert_eq!(get_num_workdays(from, to), 2.);
+
+        let from =  Date::new(2024, 11, 2).unwrap();
+        let to =  Date::new(2024, 11, 3).unwrap();
+        assert_eq!(get_num_workdays(from, to), 0.);
+
+        let from =  Date::new(2024, 11, 2).unwrap();
+        let to =  Date::new(2024, 11, 5).unwrap();
+        assert_eq!(get_num_workdays(from, to), 2.);
+
+        let from =  Date::new(2024, 11, 1).unwrap();
+        let to =  Date::new(2024, 11, 2).unwrap();
+        assert_eq!(get_num_workdays(from, to), 1.);
     }
 }
