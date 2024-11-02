@@ -344,8 +344,9 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<Message> {
 
 
 fn table_totals(app: &App) -> Element<'static, Message> {
-
-    let should_hours = compute_should_hours(&app.config);
+    let start_date = app.config.start_date;
+    let today = Zoned::now().date();
+    let should_hours = compute_should_hours(start_date, today, &app.config);
     let sum_til_last_day = app.total_worked_hours();
 
     let delta = sum_til_last_day - should_hours;

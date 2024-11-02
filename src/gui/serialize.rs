@@ -128,9 +128,10 @@ pub fn export(config: &Config) {
 }
 
 fn serialize_to_csv(todays_work: OneDaysWork, config: &Config, sum_til_last_day: f32) -> String {
-    let should_hours = compute_should_hours(config);
-
+    let start_date = config.start_date;
     let date = todays_work.date;
+    let should_hours = compute_should_hours(start_date, date, config);
+
 
     let sum_work = match todays_work.sum_work.as_ref() {
         Some(sum_work) => &format_duration(&sum_work),
@@ -143,13 +144,27 @@ fn serialize_to_csv(todays_work: OneDaysWork, config: &Config, sum_til_last_day:
     let contingent = sum_til_last_day - should_hours;
     let (hours, minutes) = compute_hours_and_minutes(contingent);
 
+
+    let vacation = match todays_work.vacation {
+        true => "VACATION",
+        false => "",
+    };
+
+    let location = match todays_work.location {
+        Some(location) => match location{
+            Location::Homeoffice => "Home office",
+            Location::Office => "In office",
+        },
+        None => "",
+    };
+
     let mut write_string = format!("{date};;;;;;\n");
     write_string = write_string
         + &format!(
-            ";SUM WORK;{sum_work};SUM BREAKS;{sum_pause};CONTINGENT;{hours} : {:0>2}\n",
+            "{location};SUM WORK;{sum_work};SUM BREAKS;{sum_pause};CONTINGENT;{hours} : {:0>2}\n",
             minutes.abs()
         );
-    write_string = write_string + ";;;;;;\n";
+    write_string = write_string + &format!("{vacation};;;;;;\n");
     write_string = write_string + ";START;END;;DURATION;BREAK;\n";
 
     for work_times in &todays_work.work_duration {

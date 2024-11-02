@@ -1,5 +1,5 @@
 use iced_aw::date_picker::Date;
-use jiff::{Span, Zoned};
+use jiff::Span;
 use jiff::civil::{date, Weekday};
 use crate::config::Config;
 
@@ -18,11 +18,9 @@ pub fn compute_hours_and_minutes(input_hours: f32) -> (i32, i32) {
     (hours, minutes)
 }
 
-pub fn compute_should_hours(config: &Config) -> f32 {
+pub fn compute_should_hours(from: jiff::civil::Date, to: jiff::civil::Date, config: &Config) -> f32 {
     let hours_week = config.hours_week;
-    let start_day = config.start_date;
-    let today = Zoned::now().date();
-    let work_days = get_num_workdays(start_day, today);
+    let work_days = get_num_workdays(from, to);
     let hours_per_day = hours_week / 5.;
 
    work_days * hours_per_day

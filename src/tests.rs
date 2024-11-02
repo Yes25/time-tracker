@@ -3,7 +3,7 @@ mod tests {
     use jiff::Span;
     use jiff::civil::Date;
     use crate::config::Config;
-    use crate::utils::{get_num_workdays};
+    use crate::utils::get_num_workdays;
 
     #[test]
     fn test_spans() {
