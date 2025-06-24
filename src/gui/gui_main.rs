@@ -77,6 +77,7 @@ pub enum Message {
     CancelDate,
     LocationSelected(Location),
     VacationToggled(bool),
+    AddFullWordDayToggled(bool),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -84,17 +85,17 @@ pub enum State {
     Started,
     Stopped,
     NotToday,
-} 
+}
 
 impl App {
-	
+
 	pub(crate) fn new() -> (Self, Task<Message>) {
 		(
             init_app_state(),
             Task::none()
         )
 	}
-    
+
     pub(crate) fn theme(&self) -> iced::Theme {
         iced::Theme::TokyoNightStorm
 	}
@@ -127,6 +128,7 @@ impl App {
                         sum_work: None,
                         sum_pause: None,
                         vacation: false,
+                        added_workday: false,
                     });
                     }
                 self.date = date;
@@ -168,6 +170,26 @@ impl App {
                     }
                 }
                 Calendar::update(&self.calendar);
+            },
+            Message::AddFullWordDayToggled(is_added_workday) => {
+                self.calendar.get_mut(&self.date.to_string()).unwrap().added_workday = is_added_workday;
+
+                let work_hours= self.config.get_workday_span();
+
+                if is_added_workday {
+                    let mut work = Span::new();
+                    if let Some(sum_work) = self.calendar.get(&self.date.to_string()).unwrap().sum_work {
+                        work = sum_work;
+                    }
+                    let new_sum = work.checked_add(work_hours).unwrap();
+                    self.calendar.get_mut(&self.date.to_string()).unwrap().sum_work = Some(new_sum);
+                } else {
+                    if let Some(sum_work) = self.calendar.get(&self.date.to_string()).unwrap().sum_work {
+                        let new_sum = sum_work.checked_sub(work_hours).unwrap();
+                        self.calendar.get_mut(&self.date.to_string()).unwrap().sum_work = Some(new_sum);
+                    }
+                }
+                Calendar::update(&self.calendar);
             }
         }
         Task::none()
@@ -185,6 +207,10 @@ impl App {
 
         let vacation_checkbox = row!(checkbox("Vacation", self.calendar.get(&self.date.to_string()).unwrap().vacation)
             .on_toggle(Message::VacationToggled))
+            .padding(Padding{top:5., right:0., bottom:2., left:10.});
+
+        let add_full_work_day_checkbox = row!(checkbox("Generic Workday", self.calendar.get(&self.date.to_string()).unwrap().added_workday)
+            .on_toggle(Message::AddFullWordDayToggled))
             .padding(Padding{top:5., right:0., bottom:25., left:10.});
 
         let main_container = Container::new(
@@ -200,6 +226,7 @@ impl App {
                     start_stop_btn(&self.state),
                     pick_list,
                     vacation_checkbox,
+                    add_full_work_day_checkbox,
                     table_totals(self),
                     vertical_space(),
                     row!(
@@ -214,7 +241,7 @@ impl App {
                 .width(Length::FillPortion(2)),
             )
         );
-        
+
         main_container.height(Length::Fill)
         .width(Length::Fill)
         .align_x(alignment::Horizontal::Center)
@@ -319,7 +346,7 @@ fn one_days_work(one_days_work: &OneDaysWork) -> Element<Message> {
         stop_col = stop_col.push(row!(text(stop_label)));
         duration_col = duration_col.push(row!(text(duration_label)));
         pause_col = pause_col.push(row!(text(pause_label)));
-        
+
     }
 
     duration_col = duration_col.push(row!(horizontal_rule(4)));
@@ -356,16 +383,16 @@ fn table_totals(app: &App) -> Element<'static, Message> {
         sign = "-";
     }
     let delta_label = format!("{sign} {}:{:0>2}", hours_delta.abs(), minutes_delta.abs());
-    
+
     let work_all_times: Row<Message> = row!(
         text("Contingent: "),
         text(delta_label)
     )
         .padding(Padding{top: 5., right: 0., bottom:5., left:10.});
-    
+
     let mut table: Column<Message> = Column::new();
         table = table.push(work_all_times);
-    
+
     table.into()
 }
 

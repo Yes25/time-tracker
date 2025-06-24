@@ -51,6 +51,7 @@ pub struct OneDaysWork {
     pub sum_work: Option<Span>,
     pub sum_pause: Option<Span>,
     pub vacation: bool,
+    pub added_workday: bool,
 }
 
 impl OneDaysWork {
@@ -69,16 +70,16 @@ impl OneDaysWork {
                 Some(_) => {
                     let work_times = WorkTimes::build_new_work_times();
                     let start = work_times.start.clone().unwrap();
-                    
+
                     let end = self.work_duration.last().unwrap().end.clone().unwrap();
                     let duration_pause = end.until(&start).unwrap();
                     self.work_duration.last_mut().unwrap().pause = Some(duration_pause);
-                    
+
                     self.work_duration.push(work_times);
                     self.sum_pauses();
                 }
                 None => {
-                    println!("WARN ::: end wasn't set jet")    
+                    println!("WARN ::: end wasn't set jet")
                 }
             }
         }

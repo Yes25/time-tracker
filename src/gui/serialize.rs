@@ -57,6 +57,7 @@ pub fn init_calendar() -> HashMap<String, OneDaysWork> {
                     sum_work: None,
                     sum_pause: None,
                     vacation: false,
+                    added_workday: false,
                 },
             );
             calendar
@@ -75,6 +76,7 @@ pub fn init_calendar() -> HashMap<String, OneDaysWork> {
                             sum_work: None,
                             sum_pause: None,
                             vacation: false,
+                            added_workday: false,
                         },
                     );
                     return calendar;
@@ -190,4 +192,3 @@ fn serialize_to_csv(todays_work: OneDaysWork, config: &Config, sum_til_last_day:
     write_string = write_string + "\n";
     write_string
 }
-
